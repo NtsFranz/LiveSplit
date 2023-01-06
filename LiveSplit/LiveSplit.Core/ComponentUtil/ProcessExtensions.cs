@@ -56,15 +56,23 @@ namespace LiveSplit.ComponentUtil
             const int LIST_MODULES_ALL = 3;
             const int MAX_PATH = 260;
 
-            var hModules = new IntPtr[1024];
-
-            uint cb = (uint)IntPtr.Size*(uint)hModules.Length;
             uint cbNeeded;
 
-            if (!WinAPI.EnumProcessModulesEx(p.Handle, hModules, cb, out cbNeeded, LIST_MODULES_ALL))
+            // check the memory size
+            if (!WinAPI.EnumProcessModulesEx(p.Handle, null, 0, out cbNeeded, LIST_MODULES_ALL))
                 throw new Win32Exception();
+
             uint numMods = cbNeeded / (uint)IntPtr.Size;
 
+            // create a container array of the correct size
+            var hModules = new IntPtr[numMods];
+
+            uint cb = (uint)IntPtr.Size*(uint)hModules.Length;
+
+            // then actually fill the array with the module handles
+            if (!WinAPI.EnumProcessModulesEx(p.Handle, hModules, cb, out cbNeeded, LIST_MODULES_ALL))
+                throw new Win32Exception();
+            
             int hash = p.StartTime.GetHashCode() + p.Id + (int)numMods;
             if (ModuleCache.ContainsKey(hash))
                 return ModuleCache[hash];
